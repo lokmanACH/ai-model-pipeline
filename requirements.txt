@@ -1,13 +1,23 @@
+# Core
+setuptools
+wheel
+
+# Install torch FIRST
 torch==2.1.0
 torchvision==0.16.0
-opencv-python
+
+# Then dependencies
 cython
 pyyaml
 tqdm
-gdown
 cloudpickle
-matplotlib
 Pillow
-git+https://github.com/facebookresearch/detectron2.git
+opencv-python-headless
+
+# API
 flask
 gunicorn
+gdown
+
+# Detectron2 LAST
+git+https://github.com/facebookresearch/detectron2.git
