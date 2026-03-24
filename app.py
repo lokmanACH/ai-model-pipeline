@@ -1,33 +1,56 @@
 import os
 import cv2
 import numpy as np
-from flask import Flask, request, jsonify
+import gdown
 
+from flask import Flask, request, jsonify
 from detectron2.config import get_cfg
 from detectron2.engine import DefaultPredictor
 
 app = Flask(__name__)
 
 # =========================
-# 🔧 CONFIGURATION
+# 🔧 GOOGLE DRIVE FILES
 # =========================
-MODEL_DIR = "model"
-CONFIG_PATH = os.path.join(MODEL_DIR, "config.yaml")
-WEIGHTS_PATH = os.path.join(MODEL_DIR, "model_final.pth")
+
+# 👉 Replace with your own IDs
+MODEL_FILE_ID = "https://drive.google.com/drive/folders/1pdQAowFdAEJ3uIKE8u_3q4_YR8SOE8Cs?usp=sharing"
+CONFIG_FILE_ID = "https://drive.google.com/drive/folders/1pdQAowFdAEJ3uIKE8u_3q4_YR8SOE8Cs?usp=sharing"
+
+MODEL_PATH = "model_final.pth"
+CONFIG_PATH = "config.yaml"
 
 # =========================
-# 🧠 LOAD MODEL (once)
+# 📥 DOWNLOAD FILES (ONCE)
+# =========================
+def download_file(file_id, output_path):
+    if not os.path.exists(output_path):
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
+        url = file_id
+        print(f"Downloading {output_path}...")
+        gdown.download(url, output_path, quiet=False)
+    else:
+        print(f"{output_path} already exists.")
+
+# Download both files
+download_file(MODEL_FILE_ID, MODEL_PATH)
+download_file(CONFIG_FILE_ID, CONFIG_PATH)
+
+# =========================
+# 🧠 LOAD MODEL
 # =========================
 cfg = get_cfg()
 cfg.merge_from_file(CONFIG_PATH)
 
-cfg.MODEL.WEIGHTS = WEIGHTS_PATH
+cfg.MODEL.WEIGHTS = MODEL_PATH
 cfg.MODEL.DEVICE = "cpu"  # Render = CPU
 
-# Optional: adjust threshold
+# Optional threshold
 cfg.MODEL.ROI_HEADS.SCORE_THRESH_TEST = 0.5
 
 predictor = DefaultPredictor(cfg)
+
+print("✅ Model loaded successfully!")
 
 # =========================
 # 🏠 HEALTH CHECK
@@ -40,7 +63,7 @@ def home():
     })
 
 # =========================
-# 🔍 PREDICT ENDPOINT
+# 🔍 PREDICT
 # =========================
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -57,7 +80,7 @@ def predict():
         return jsonify({"error": "Invalid image"}), 400
 
     # =========================
-    # ⚡ Resize (important for Render RAM)
+    # ⚡ Resize for memory safety
     # =========================
     max_size = 800
     h, w = image.shape[:2]
@@ -73,7 +96,7 @@ def predict():
     instances = outputs["instances"].to("cpu")
 
     # =========================
-    # 📊 FORMAT RESULTS
+    # 📊 FORMAT OUTPUT
     # =========================
     boxes = instances.pred_boxes.tensor.numpy().tolist() if instances.has("pred_boxes") else []
     scores = instances.scores.numpy().tolist() if instances.has("scores") else []
