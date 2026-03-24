@@ -1,0 +1,12 @@
+torch==2.1.0
+torchvision==0.16.0
+opencv-python
+cython
+pyyaml
+tqdm
+cloudpickle
+matplotlib
+Pillow
+git+https://github.com/facebookresearch/detectron2.git
+flask
+gunicorn
