@@ -4,6 +4,7 @@ opencv-python
 cython
 pyyaml
 tqdm
+gdown
 cloudpickle
 matplotlib
 Pillow
