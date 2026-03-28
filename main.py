@@ -372,9 +372,8 @@
 
 
 
-
-from fastapi import FastAPI, HTTPException, Header
-from typing import List, Any, Dict, Optional
+from fastapi import FastAPI, HTTPException
+from typing import List, Any, Dict
 from pydantic import BaseModel
 from bson import ObjectId
 import motor.motor_asyncio
@@ -384,6 +383,7 @@ import os
 from models.paddleocr import run_paddle_inference
 from models.detectron2 import run_inference, load_model
 from models.utils import download_image
+from google import genai  # Gemini client
 
 # ---------------- MongoDB ----------------
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017")
@@ -400,15 +400,17 @@ class LayoutRegion(BaseModel):
     score: float
     lines: List[str]
 
-
 class ImageResult(BaseModel):
     url: str
     regions: List[LayoutRegion]
 
-
 class ProcessResult(BaseModel):
     exam_solution_texts: List[ImageResult]
     student_answers_texts: List[ImageResult]
+
+# ---------------- Request Body Schema ----------------
+class TokenRequest(BaseModel):
+    api_key: str
 
 # ---------------- FastAPI ----------------
 app = FastAPI(title="Exam OCR + Layout API")
@@ -438,7 +440,6 @@ def all_images_have_regions(images: List[dict]) -> bool:
             return False
     return True
 
-# ---------------- Core Pipeline ----------------
 def process_single_image(img, url: str) -> ImageResult:
     layout_regions: List[Dict[str, Any]] = run_inference(img)
     result_regions: List[LayoutRegion] = []
@@ -499,19 +500,14 @@ async def process_images(images: List[dict]) -> List[ImageResult]:
     return results
 
 # ---------------- API Endpoint ----------------
-@app.get("/process_exam/{student_answer_id}", response_model=ProcessResult)
-async def process_exam(
-    student_answer_id: str,
-    x_api_key: Optional[str] = Header(None)  # receive token in request header
-):
+@app.post("/process_exam/{student_answer_id}", response_model=ProcessResult)
+async def process_exam(student_answer_id: str, req: TokenRequest):
 
-    if not x_api_key:
-        raise HTTPException(status_code=400, detail="API token missing in header 'x-api-key'")
+    if not req.api_key:
+        raise HTTPException(status_code=400, detail="API key missing in request body")
 
-    # 🔒 Now you can create your Gemini/OpenAI client here using this token
-    # Example:
-    # from google import genai
-    # client = genai.Client(api_key=x_api_key)
+    # 🔒 Create Gemini/OpenAI client dynamically using the token
+    # client = genai.Client(api_key=req.api_key)
 
     # ------------------- Validate ID -------------------
     try:
@@ -577,10 +573,3 @@ async def process_exam(
         exam_solution_texts=exam_results,
         student_answers_texts=student_results,
     )
-
-
-
-
-
-
-
