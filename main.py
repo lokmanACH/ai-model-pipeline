@@ -1,6 +1,6 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from gemini.grader import analyze_student_solution
+from grader import analyze_student_solution
 
 app = FastAPI(title="Gemini Exam Grader API")
 
